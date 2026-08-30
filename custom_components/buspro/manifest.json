@@ -1,15 +1,15 @@
 {
   "domain": "buspro",
   "name": "HDL Buspro",
-  "config_flow": true,
-  "documentation": "https://github.com/MubashirLahori97/home-assistant-hdl-buspro",
-  "issue_tracker": "https://github.com/MubashirLahori97/home-assistant-hdl-buspro/issues",
   "codeowners": ["@MubashirLahori97"],
+  "config_flow": true,
   "dependencies": [],
+  "documentation": "https://github.com/MubashirLahori97/home-assistant-hdl-buspro",
+  "homekit": {},
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/MubashirLahori97/home-assistant-hdl-buspro/issues",
   "requirements": ["openpyxl"],
   "ssdp": [],
-  "zeroconf": [],
-  "homekit": {},
   "version": "2.0.0",
-  "iot_class": "local_push"
+  "zeroconf": []
 }
