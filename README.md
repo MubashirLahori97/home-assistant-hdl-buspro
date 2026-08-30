@@ -99,7 +99,7 @@ The integration communicates directly with the HDL Buspro system over the local 
 
 ### HACS
 
-Once the integration is available in the HACS default repository, it can be installed directly from:
+After approval, the integration will be available in the HACS default repository and can be installed directly from:
 
 **HACS → Integrations → HDL Buspro**
 
@@ -117,6 +117,14 @@ During development, you can install it as a custom repository:
 7. Click **Add**.
 8. Install **HDL Buspro**.
 9. Restart Home Assistant.
+
+You can also use the [My Home Assistant HACS link](https://my.home-assistant.io/create-link/?redirect=hacs_repository&repository=MubashirLahori97%2Fhome-assistant-hdl-buspro) to add this repository.
+
+### Requirements
+
+- Home Assistant with access to the HDL Buspro IP gateway over UDP.
+- An HDL Studio export or backup in JSON, CSV, or XLSX format for automatic setup. The file must be available to Home Assistant, for example under `/config`.
+- The `openpyxl` dependency is installed automatically when XLSX parsing is used.
 
 ---
 
