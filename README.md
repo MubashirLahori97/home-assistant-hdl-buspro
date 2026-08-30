@@ -1,62 +1,181 @@
-# HDL Buspro for Home Assistant (v2.0)
+# HDL Buspro for Home Assistant
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
+[![HACS](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
 
-The HDL Buspro integration allows you to control your HDL Buspro system directly from Home Assistant with **automatic setup via HDL Studio project backup export**.
+A Home Assistant integration for **HDL Buspro** systems, providing local control and monitoring of HDL devices directly from Home Assistant.
 
----
-
-## Features
-
-- **🚀 Automatic Setup**: Upload or point to your HDL gateway backup JSON file (`XXX_Backup_.json` or `.busproj`) — all floors, rooms, lights, curtains, AC units, and switches are automatically imported and assigned to their respective Home Assistant Areas.
-- **💡 Lighting**: Full support for standard On/Off switches, dimmable lights, and CCT lights with brightness & fade control.
-- **🪟 Curtains & Blinds**: Support for roller shutters and Trietex curtains with position control and real-time state feedback.
-- **❄️ Climate / AC**: Complete AC control (modes: Cool, Heat, Fan, Auto, Dry; fan speeds: Auto, High, Med, Low; swing; temperature setpoint).
-- **🔌 Switches**: Generic relays and switches.
-- **⚡ Local Push**: Operates entirely over local UDP with zero cloud dependency and real-time event updates.
+The integration is designed to simplify HDL Buspro setup by using an **HDL Studio project backup/export** to automatically discover and configure devices, rooms, and areas.
 
 ---
 
-## Installation & Setup
+## ✨ Features
 
-1. **Install via HACS**:
-   - Under HACS -> Integrations, add this repository as a custom repository (Category: `Integration`).
-   - Download "HDL Buspro" and restart Home Assistant.
+### 🚀 Automatic Setup
 
-2. **Configure via UI**:
-   - Go to **Settings > Devices & Services > Add Integration** and search for **HDL Buspro**.
-   - Provide the path to your HDL Gateway backup JSON file (e.g. `/config/Daim_Raza.json`) or paste its JSON content directly.
-   - Confirm your gateway IP and Port (auto-detected from your file).
-   - Click Submit — all entities and Areas are created automatically!
+Import your HDL Buspro installation using an HDL Studio project backup/export.
+
+The integration can use the project information to automatically discover and configure:
+
+- Floors
+- Rooms
+- Areas
+- Lights
+- Curtains and blinds
+- AC / climate units
+- Switches
+- Other supported HDL devices
+
+This reduces the need to manually configure individual HDL devices in Home Assistant.
 
 ---
 
-## Custom Services
+### 💡 Lighting
 
-You can send arbitrary commands or trigger scenes from Home Assistant automations:
+Support for HDL lighting devices, including:
 
-#### 1. Activating a scene:
+- On/Off lights
+- Dimmable lights
+- Brightness control
+- CCT lights
+- Fade control
+- Real-time state updates
+
+---
+
+### 🪟 Curtains & Blinds
+
+Control supported HDL Buspro curtain and blind devices from Home Assistant.
+
+Supported functionality includes:
+
+- Open
+- Close
+- Stop
+- Position control
+- Real-time position/state feedback
+
+---
+
+### ❄️ Climate / AC
+
+Control supported HDL Buspro HVAC/AC devices directly from Home Assistant.
+
+Supported functionality includes:
+
+- Cool
+- Heat
+- Fan
+- Auto
+- Dry
+- Temperature setpoint
+- Fan speed
+- Auto
+- High
+- Medium
+- Low
+- Swing control
+
+---
+
+### 🔌 Switches
+
+Support for generic HDL Buspro relay and switch devices.
+
+---
+
+### ⚡ Local Communication
+
+The integration communicates directly with the HDL Buspro system over the local network.
+
+- No cloud service required
+- Local UDP communication
+- Real-time event updates
+- Low-latency control
+- Works without an external HDL cloud service
+
+---
+
+## 📦 Installation
+
+### HACS
+
+Once the integration is available in the HACS default repository, it can be installed directly from:
+
+**HACS → Integrations → HDL Buspro**
+
+During development, you can install it as a custom repository:
+
+1. Open **HACS**.
+2. Go to **Integrations**.
+3. Select the three-dot menu.
+4. Select **Custom repositories**.
+5. Add:
+
+   `https://github.com/MubashirLahori97/home-assistant-hdl-buspro`
+
+6. Select **Integration** as the category.
+7. Click **Add**.
+8. Install **HDL Buspro**.
+9. Restart Home Assistant.
+
+---
+
+## ⚙️ Configuration
+
+After installation:
+
+1. Go to **Settings**.
+2. Select **Devices & services**.
+3. Click **Add Integration**.
+4. Search for **HDL Buspro**.
+5. Follow the configuration flow.
+
+The integration can use an HDL Gateway project backup/export to automatically configure the installation.
+
+Depending on the exported project, the configuration can include:
+
+- Gateway information
+- Floors
+- Rooms
+- Areas
+- Devices
+- Device addresses
+- Device types
+
+The gateway IP address and port can be obtained from the imported project information when available.
+
+---
+
+## 🏠 Home Assistant Entities
+
+Supported HDL Buspro devices are exposed as native Home Assistant entities.
+
+| HDL Device | Home Assistant Entity |
+|---|---|
+| Lighting | Light |
+| Switch / Relay | Switch |
+| Curtain / Blind | Cover |
+| AC / HVAC | Climate |
+| Sensors | Sensor / Binary Sensor |
+
+The exact entities created depend on the devices present in the HDL Buspro project.
+
+---
+
+# 🛠️ Custom Services
+
+The integration also provides services for advanced HDL Buspro control.
+
+These services can be used from Home Assistant automations, scripts, and developer tools.
+
+---
+
+## Activate a Scene
+
+Service:
+
 ```yaml
 service: buspro.activate_scene
 data:
   address: [1, 74]
   scene_address: [3, 5]
-```
-
-#### 2. Sending an arbitrary message:
-```yaml
-service: buspro.send_message
-data:
-  address: [1, 74]
-  operate_code: [4, 78]
-  payload: [1, 100, 0, 3]
-```
-
-#### 3. Setting a universal switch:
-```yaml
-service: buspro.set_universal_switch
-data:
-  address: [1, 74]
-  switch_number: 100
-  status: 1
-```
