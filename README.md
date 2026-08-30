@@ -1,4 +1,4 @@
-# HDL Buspro for Home Assistant
+# HDL Buspro Home Assistant Integration
 
 [![HACS](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
 
