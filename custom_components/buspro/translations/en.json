@@ -1,0 +1,75 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "HDL Buspro Setup",
+        "description": "Provide a project file (Excel .xlsx, CSV .csv, or JSON backup), or leave empty to configure manually.",
+        "data": {
+          "file_path": "File path (e.g. /config/devices.xlsx or /config/devices.csv)",
+          "file_content": "Or paste file content (JSON or CSV) directly"
+        }
+      },
+      "manual_gateway": {
+        "title": "HDL Gateway Connection",
+        "description": "Enter the IP address and UDP port of your HDL Buspro IP Gateway:",
+        "data": {
+          "host": "Gateway IP Address",
+          "port": "Gateway Port (UDP, default 6000)"
+        }
+      },
+      "confirm": {
+        "title": "Confirm HDL Gateway & Devices",
+        "description": "Discovered {total_devices} devices ({device_summary}) across {area_count} rooms.\n\nPlease verify or adjust the HDL Gateway connection settings below:",
+        "data": {
+          "host": "Gateway IP Address",
+          "port": "Gateway Port (UDP)"
+        }
+      }
+    },
+    "error": {
+      "missing_input": "Please provide a file path or paste file content.",
+      "parse_error": "Could not parse HDL project data from the file or content.",
+      "unknown": "An unexpected error occurred."
+    },
+    "abort": {
+      "already_configured": "This HDL Buspro gateway is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "HDL Buspro Options",
+        "description": "Choose an action to manage your HDL Buspro setup:",
+        "menu_options": {
+          "add_device": "Add Device or Sensor Manually",
+          "import_file": "Import / Update from File (Excel, CSV, JSON)"
+        }
+      },
+      "add_device": {
+        "title": "Add Device or Sensor Manually",
+        "description": "Enter the device details and hardware address (Subnet.Device.Channel):",
+        "data": {
+          "name": "Device Name (e.g. Ceiling Light, Room Temp)",
+          "device_type": "Device / Sensor Type",
+          "subnet_id": "Subnet ID",
+          "device_id": "Device ID",
+          "channel": "Channel / Switch No",
+          "area_name": "Room / Area Name (e.g. Study, Lounge)"
+        }
+      },
+      "import_file": {
+        "title": "Import / Update from File",
+        "description": "Provide the path or paste content of an Excel (.xlsx), CSV (.csv), or JSON backup file:",
+        "data": {
+          "file_path": "File path (e.g. /config/devices.xlsx)",
+          "file_content": "Or paste content directly"
+        }
+      }
+    },
+    "error": {
+      "missing_input": "Please provide a file path or paste file content.",
+      "parse_error": "Could not parse file data.",
+      "unknown": "An unexpected error occurred."
+    }
+  }
+}
