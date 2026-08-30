@@ -1,4 +1,7 @@
 # HDL Buspro Home Assistant Integration
+HDL Buspro integration for Home Assistant
+Home Assistant integration for HDL Smart Bus / Buspro
+Control HDL Buspro lights, curtains, climate, and switches from Home Assistant
 
 [![HACS](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
 
