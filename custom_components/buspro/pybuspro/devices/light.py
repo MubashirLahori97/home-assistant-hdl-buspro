@@ -1,4 +1,4 @@
-﻿from .control import _SingleChannelControl
+from .control import _SingleChannelControl
 from .device import Device
 from ..helpers.enums import *
 from ..helpers.generics import Generics

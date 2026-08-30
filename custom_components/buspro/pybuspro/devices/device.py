@@ -1,4 +1,4 @@
-﻿import asyncio
+import asyncio
 
 from .control import _ReadStatusOfChannels
 

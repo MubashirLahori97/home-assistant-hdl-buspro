@@ -1,4 +1,4 @@
-﻿''' pybuspro version 1.0.0  '''
+''' pybuspro version 1.0.0  '''
 
 import asyncio
 import logging

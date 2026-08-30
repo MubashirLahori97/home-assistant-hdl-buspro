@@ -1,4 +1,4 @@
-﻿import json
+import json
 from ..helpers.enums import DeviceType
 
 
