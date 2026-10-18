@@ -8,6 +8,11 @@ CONF_SCENES = "scenes"
 CONF_GATEWAY_INFO = "gateway"
 DEFAULT_PORT = 6000
 
+# Registry bookkeeping: floors/areas the integration created itself, so
+# re-imports never recreate user-deleted entries or move the user's own areas.
+CONF_CREATED_FLOORS = "created_floors"
+CONF_CREATED_AREAS = "created_areas"
+
 # SPK code to HA platform mapping
 SPK_TO_PLATFORM = {
     "light.switch": "light",

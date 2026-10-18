@@ -19,6 +19,7 @@ from .const import (
     CONF_GATEWAY_INFO,
     DEFAULT_PORT,
 )
+from . import async_setup_floors_and_areas
 from .hdl_parser import parse_any, get_device_summary, HDLParseError
 
 _LOGGER = logging.getLogger(__name__)
@@ -93,7 +94,9 @@ class BusproConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 return await self.async_step_manual_gateway()
 
             try:
-                self._parsed_data = parse_any(target_source)
+                self._parsed_data = await self.hass.async_add_executor_job(
+                    parse_any, target_source
+                )
                 gateway = self._parsed_data.get("gateway", {})
                 self._discovered_host = gateway.get("ip", "") or "192.168.1.250"
                 self._discovered_port = gateway.get("port", DEFAULT_PORT)
@@ -168,6 +171,9 @@ class BusproConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_SCENES: self._parsed_data.get("scenes", []),
                 CONF_GATEWAY_INFO: self._parsed_data.get("gateway", {}),
             }
+
+            # Create floors/areas once, at import time (never on startup).
+            entry_data = await async_setup_floors_and_areas(self.hass, entry_data)
 
             title = f"HDL Buspro ({host})"
             return self.async_create_entry(title=title, data=entry_data)
@@ -280,12 +286,17 @@ class BusproOptionsFlowHandler(config_entries.OptionsFlow):
                 errors["base"] = "missing_input"
             else:
                 try:
-                    parsed = parse_any(target_source)
+                    parsed = await self.hass.async_add_executor_job(
+                        parse_any, target_source
+                    )
                     data = dict(self._config_entry.data)
                     data[CONF_DEVICES] = parsed.get("devices", [])
                     data[CONF_AREAS] = parsed.get("areas", [])
                     data[CONF_FLOORS] = parsed.get("floors", [])
                     data[CONF_SCENES] = parsed.get("scenes", [])
+
+                    # Create any new floors/areas at import time (never on startup).
+                    data = await async_setup_floors_and_areas(self.hass, data)
 
                     self.hass.config_entries.async_update_entry(self._config_entry, data=data)
                     await self.hass.config_entries.async_reload(self._config_entry.entry_id)

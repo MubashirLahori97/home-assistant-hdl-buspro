@@ -1,1 +1,74 @@
+activate_scene:
+  name: Activate scene
+  description: Activate an HDL Buspro scene on the given device address.
+  fields:
+    address:
+      name: Device address
+      description: The HDL device address as [subnet_id, device_id].
+      required: true
+      example: "[1, 74]"
+      selector:
+        object: {}
+    scene_address:
+      name: Scene address
+      description: The scene address as [subnet_id, scene_number].
+      required: true
+      example: "[3, 5]"
+      selector:
+        object: {}
 
+send_message:
+  name: Send message
+  description: Send a raw HDL Buspro telegram to a device address.
+  fields:
+    address:
+      name: Device address
+      description: The HDL device address as [subnet_id, device_id].
+      required: true
+      example: "[1, 74]"
+      selector:
+        object: {}
+    operate_code:
+      name: Operate code
+      description: The HDL Buspro operate code to send.
+      required: true
+      example: "49"
+      selector:
+        number:
+          min: 0
+    payload:
+      name: Payload
+      description: Payload bytes as a list of integers.
+      required: true
+      example: "[1]"
+      selector:
+        object: {}
+
+set_universal_switch:
+  name: Set universal switch
+  description: Turn an HDL universal switch on or off.
+  fields:
+    address:
+      name: Device address
+      description: The HDL device address as [subnet_id, device_id].
+      required: true
+      example: "[1, 74]"
+      selector:
+        object: {}
+    switch_number:
+      name: Switch number
+      description: The universal switch number.
+      required: true
+      example: "9"
+      selector:
+        number:
+          min: 1
+    status:
+      name: Status
+      description: 1 for on, 0 for off.
+      required: true
+      example: "1"
+      selector:
+        number:
+          min: 0
+          max: 1
