@@ -2,15 +2,10 @@
 import logging
 
 import homeassistant.helpers.config_validation as cv
-try:
-    from homeassistant.helpers import floor_registry as fr
-except ImportError:
-    fr = None
-from homeassistant.helpers import area_registry as ar
 import voluptuous as vol
 from homeassistant.const import (
-    CONF_HOST, 
-    CONF_PORT, 
+    CONF_HOST,
+    CONF_PORT,
     CONF_NAME,
     EVENT_HOMEASSISTANT_STOP,
 )
@@ -23,6 +18,9 @@ from .const import (
     CONF_AREAS,
     CONF_FLOORS,
     CONF_SCENES,
+    CONF_GATEWAY_INFO,
+    CONF_CREATED_FLOORS,
+    CONF_CREATED_AREAS,
     PLATFORMS,
 )
 
@@ -87,40 +85,107 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     return True
 
 
+async def async_setup_floors_and_areas(hass: HomeAssistant, entry_data: dict) -> dict:
+    """Create floors and areas once, when the user completes a project import.
+
+    Runs only from the config flow (new entry) or options flow (re-import).
+    It never runs on startup/reload, so it cannot resurrect floors/areas the
+    user deleted, and it only ever touches areas the integration created
+    itself (tracked in entry_data).
+    """
+    try:
+        from homeassistant.helpers import floor_registry as fr
+    except ImportError:
+        fr = None
+    from homeassistant.helpers import area_registry as ar
+
+    created_floors = set(entry_data.get(CONF_CREATED_FLOORS, []) or [])
+    created_areas = list(entry_data.get(CONF_CREATED_AREAS, []) or [])
+    created_area_ids = {a.get("area_id") for a in created_areas if a.get("area_id")}
+
+    floors = entry_data.get(CONF_FLOORS, []) or []
+    areas = entry_data.get(CONF_AREAS, []) or []
+
+    # Create any new floors (skip ones already created on a previous import).
+    # Existing floors are only looked up, never recreated.
+    floor_id_map = {}
+    if fr is not None and floors:
+        try:
+            floor_reg = fr.async_get(hass)
+            get_by_name = getattr(floor_reg, "async_get_floor_by_name", None)
+            for floor_name in floors:
+                if not floor_name:
+                    continue
+                if floor_name in created_floors:
+                    if get_by_name is not None:
+                        existing = get_by_name(floor_name)
+                        if existing is not None:
+                            floor_id_map[floor_name] = existing.floor_id
+                    continue
+                floor_entry = floor_reg.async_get_or_create(floor_name)
+                floor_id_map[floor_name] = floor_entry.floor_id
+                created_floors.add(floor_name)
+        except Exception as err:
+            _LOGGER.debug("Could not create floors: %s", err)
+
+    # Create any new areas; only ever update floor assignment for areas
+    # this integration created itself.
+    if areas:
+        try:
+            area_reg = ar.async_get(hass)
+            for area_info in areas:
+                area_name = area_info.get("name")
+                floor_name = area_info.get("floor")
+                if not area_name:
+                    continue
+                known = next(
+                    (a for a in created_areas if a.get("name") == area_name), None
+                )
+                if known is None:
+                    area_entry = area_reg.async_get_or_create(area_name)
+                    if floor_name and floor_name in floor_id_map:
+                        try:
+                            area_reg.async_update(
+                                area_entry.id, floor_id=floor_id_map[floor_name]
+                            )
+                        except Exception:
+                            pass
+                    created_areas.append(
+                        {"name": area_name, "area_id": area_entry.id}
+                    )
+                    created_area_ids.add(area_entry.id)
+                else:
+                    # Re-import: only ever update the floor assignment of an
+                    # area this integration created itself (same registry id,
+                    # resolved by name so deleted/renamed areas are skipped).
+                    current = area_reg.async_get_area_by_name(area_name)
+                    if (
+                        current is not None
+                        and current.id == known.get("area_id")
+                        and current.id in created_area_ids
+                        and floor_name
+                        and floor_name in floor_id_map
+                    ):
+                        try:
+                            area_reg.async_update(
+                                current.id, floor_id=floor_id_map[floor_name]
+                            )
+                        except Exception:
+                            pass
+        except Exception as err:
+            _LOGGER.debug("Could not create areas: %s", err)
+
+    entry_data[CONF_CREATED_FLOORS] = sorted(created_floors)
+    entry_data[CONF_CREATED_AREAS] = created_areas
+    return entry_data
+
+
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Setup the Buspro component from a config entry."""
     hass.data.setdefault(DOMAIN, {})
 
     host = config_entry.data.get(CONF_HOST, "")
     port = config_entry.data.get(CONF_PORT, 6000)
-    floors = config_entry.data.get(CONF_FLOORS, [])
-    areas = config_entry.data.get(CONF_AREAS, [])
-
-    # Auto-create HA Floors in Floor Registry if supported
-    floor_id_map = {}
-    if fr is not None and floors:
-        try:
-            floor_reg = fr.async_get(hass)
-            for floor_name in floors:
-                if floor_name:
-                    floor_entry = floor_reg.async_get_or_create(floor_name)
-                    floor_id_map[floor_name] = floor_entry.floor_id
-        except Exception as err:
-            _LOGGER.debug("Could not auto-create floors: %s", err)
-
-    # Auto-create HA Areas in Area Registry and link them to their respective floors
-    if areas:
-        area_reg = ar.async_get(hass)
-        for area_info in areas:
-            area_name = area_info.get("name")
-            floor_name = area_info.get("floor")
-            if area_name:
-                area_entry = area_reg.async_get_or_create(area_name)
-                if floor_name and floor_name in floor_id_map:
-                    try:
-                        area_reg.async_update(area_entry.id, floor_id=floor_id_map[floor_name])
-                    except Exception:
-                        pass
 
     buspro_module = BusproModule(hass, host, port)
     await buspro_module.start()

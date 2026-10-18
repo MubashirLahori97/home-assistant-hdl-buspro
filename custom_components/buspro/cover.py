@@ -9,7 +9,6 @@ from homeassistant.components.cover import (
 from homeassistant.core import callback
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import area_registry as ar, entity_registry as er
 try:
     from homeassistant.helpers.device_registry import DeviceInfo
 except ImportError:
@@ -86,16 +85,6 @@ class BusproCover(CoverEntity):
             )
 
         self.async_register_callbacks()
-
-    async def async_added_to_hass(self):
-        """Assign entity directly to its area in Entity Registry."""
-        await super().async_added_to_hass()
-        if self._area_name and self.registry_entry:
-            area_reg = ar.async_get(self.hass)
-            area_entry = area_reg.async_get_area_by_name(self._area_name)
-            if area_entry and self.registry_entry.area_id != area_entry.id:
-                ent_reg = er.async_get(self.hass)
-                ent_reg.async_update_entity(self.entity_id, area_id=area_entry.id)
 
     @callback
     def async_register_callbacks(self):

@@ -39,9 +39,11 @@ Support for HDL lighting devices, including:
 - On/Off lights
 - Dimmable lights
 - Brightness control
-- CCT lights
-- Fade control
+- Fade control (supports the `transition` option on turn on / turn off)
 - Real-time state updates
+
+> Note: CCT (tunable white) panels are imported as dimmable lights with
+> brightness control only; color temperature adjustment is not currently supported.
 
 ---
 
@@ -190,3 +192,43 @@ service: buspro.activate_scene
 data:
   address: [1, 74]
   scene_address: [3, 5]
+```
+
+- `address`: HDL device address as `[subnet_id, device_id]`.
+- `scene_address`: scene address as `[subnet_id, scene_number]`.
+
+---
+
+## Send a Raw Message
+
+Service:
+
+```yaml
+service: buspro.send_message
+data:
+  address: [1, 74]
+  operate_code: 49
+  payload: [1]
+```
+
+- `address`: HDL device address as `[subnet_id, device_id]`.
+- `operate_code`: HDL Buspro operate code (integer).
+- `payload`: payload bytes as a list of integers.
+
+---
+
+## Set a Universal Switch
+
+Service:
+
+```yaml
+service: buspro.set_universal_switch
+data:
+  address: [1, 74]
+  switch_number: 9
+  status: 1
+```
+
+- `address`: HDL device address as `[subnet_id, device_id]`.
+- `switch_number`: universal switch number (integer).
+- `status`: `1` for on, `0` for off.

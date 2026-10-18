@@ -2,7 +2,6 @@
 import logging
 
 import homeassistant.helpers.config_validation as cv
-from homeassistant.helpers import area_registry as ar, entity_registry as er
 try:
     from homeassistant.helpers.device_registry import DeviceInfo
 except ImportError:
@@ -12,7 +11,8 @@ from homeassistant.components.light import (
     LightEntity, 
     ColorMode, 
     PLATFORM_SCHEMA, 
-    ATTR_BRIGHTNESS
+    ATTR_BRIGHTNESS,
+    ATTR_TRANSITION
 )
 from homeassistant.const import (CONF_NAME, CONF_DEVICES)
 from homeassistant.core import callback
@@ -143,16 +143,6 @@ class BusproLight(LightEntity):
 
         self.async_register_callbacks()
 
-    async def async_added_to_hass(self):
-        """Assign entity directly to its area in Entity Registry."""
-        await super().async_added_to_hass()
-        if self._area_name and self.registry_entry:
-            area_reg = ar.async_get(self.hass)
-            area_entry = area_reg.async_get_area_by_name(self._area_name)
-            if area_entry and self.registry_entry.area_id != area_entry.id:
-                ent_reg = er.async_get(self.hass)
-                ent_reg.async_update_entity(self.entity_id, area_id=area_entry.id)
-
     @callback
     def async_register_callbacks(self):
         """Register callbacks to update hass after device was changed."""
@@ -194,17 +184,18 @@ class BusproLight(LightEntity):
 
     async def async_turn_on(self, **kwargs):
         """Instruct the light to turn on."""
+        running_time = kwargs.get(ATTR_TRANSITION, self._running_time)
         if self._dimmable:
             brightness = int(kwargs.get(ATTR_BRIGHTNESS, 255) / 255 * 100)
             if not self.is_on and self._device.previous_brightness is not None and brightness == 100:
                 brightness = self._device.previous_brightness
-            await self._device.set_brightness(brightness, self._running_time)
+            await self._device.set_brightness(brightness, running_time)
         else:
-            await self._device.set_on(self._running_time)
+            await self._device.set_on(running_time)
 
     async def async_turn_off(self, **kwargs):
         """Instruct the light to turn off."""
-        await self._device.set_off(self._running_time)
+        await self._device.set_off(kwargs.get(ATTR_TRANSITION, self._running_time))
 
     @property
     def unique_id(self):
