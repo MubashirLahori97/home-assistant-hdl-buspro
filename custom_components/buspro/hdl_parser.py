@@ -61,6 +61,9 @@ CSV_TYPE_MAP = {
     "sensor-temperature": ("sensor", "sensor.temperature", False),
     "sensor.temperature": ("sensor", "sensor.temperature", False),
     "temperature": ("sensor", "sensor.temperature", False),
+    "sensor-humidity": ("sensor", "sensor.humidity", False),
+    "sensor.humidity": ("sensor", "sensor.humidity", False),
+    "humidity": ("sensor", "sensor.humidity", False),
     "sensor-illuminance": ("sensor", "sensor.illuminance", False),
     "sensor.illuminance": ("sensor", "sensor.illuminance", False),
     "sensor.lux": ("sensor", "sensor.lux", False),
@@ -212,6 +215,8 @@ def _parse_tabular_rows(rows: List[Dict[str, str]]) -> dict:
                 platform, spk, dimmable = "climate", "hvac.ac", False
             elif "motion" in type_str or "pir" in type_str or "dry" in type_str or "contact" in type_str:
                 platform, spk, dimmable = "binary_sensor", "sensor.motion" if ("motion" in type_str or "pir" in type_str) else "sensor.dry_contact", False
+            elif "humid" in type_str:
+                platform, spk, dimmable = "sensor", "sensor.humidity", False
             elif "temp" in type_str or "lux" in type_str or "illuminance" in type_str:
                 platform, spk, dimmable = "sensor", "sensor.temperature" if "temp" in type_str else "sensor.illuminance", False
             else:

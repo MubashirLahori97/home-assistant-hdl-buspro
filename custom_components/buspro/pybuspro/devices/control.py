@@ -43,6 +43,10 @@ class _Control:
             operate_code = OperateCode.ReadSensorStatus
             payload = []
 
+        elif type(control) == _ReadTemperature:
+            operate_code = OperateCode.ReadTemperature
+            payload = [control.channel_number]
+
         elif type(control) == _ReadSensorsInOneStatus:
             operate_code = OperateCode.ReadSensorsInOneStatus
             payload = []
@@ -102,6 +106,15 @@ class _SingleChannelControl(_Control):
         self.channel_level = None
         self.running_time_minutes = None
         self.running_time_seconds = None
+
+
+class _ReadTemperature(_Control):
+    """Channel-addressed temperature read for wall panels (DLP family,
+    Enviro, Granite Display, Tile climate panels)."""
+
+    def __init__(self, buspro):
+        super().__init__(buspro)
+        self.channel_number = 1
 
 
 class _SceneControl(_Control):

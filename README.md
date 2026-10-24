@@ -88,6 +88,34 @@ Support for generic HDL Buspro relay and switch devices.
 
 ---
 
+### 🌡️ Sensors & Wall Panels
+
+Sensor support for HDL sensor modules and wall panels with built-in sensors:
+
+- **Temperature, illuminance, motion and dry contacts** from HDL sensor modules (including the 8-in-1 / 12-in-1 and Sensors-in-One modules; the Sensors-in-One status reply also provides **humidity** and lux).
+- **Wall panels** — the DLP family, **Enviro** (HDL-MPTLC43), **Granite Display** (HDL-MPTL4C) and the **Tile** climate/multifunction panels expose their built-in **temperature** sensor. Panels that carry a humidity sensor (Granite Display, Tile climate panels) also expose **humidity**.
+- Panel temperature is read with the panel's channel-addressed temperature command and from its temperature broadcasts, including the fractional (float) value — panel readings are *not* offset-corrected like the sensor modules.
+
+Add a panel's sensors from **Configure → Add device** and choose a *Panel Sensor* type, or in YAML:
+
+```yaml
+sensor:
+  - platform: buspro
+    devices:
+      - address: "1.25"
+        name: "Living Room Panel Temperature"
+        type: temperature
+        device: panel
+      - address: "1.25"
+        name: "Living Room Panel Humidity"
+        type: humidity
+        device: panel
+```
+
+The AC and floor-heating pages of these panels drive the AC / floor-heating modules on the bus; control those from the module's climate entity, as before.
+
+---
+
 ### ⚡ Local Communication
 
 The integration communicates directly with the HDL Buspro system over the local network.
@@ -169,7 +197,8 @@ Supported HDL Buspro devices are exposed as native Home Assistant entities.
 | Switch / Relay | Switch |
 | Curtain / Blind | Cover |
 | AC / HVAC | Climate |
-| Sensors | Sensor / Binary Sensor |
+| Sensors (temperature, humidity, illuminance, motion, dry contact) | Sensor / Binary Sensor |
+| Wall panels (DLP, Enviro, Granite Display, Tile) built-in sensors | Sensor (temperature, humidity) |
 
 The exact entities created depend on the devices present in the HDL Buspro project.
 

@@ -25,6 +25,11 @@ class DeviceType(Enum):
     SB_DN_R0816 = b'\x01\xAC'     # Rele
     SB_DRY_4Z = b'\x00\x77'       # Dry contact
     HDL_MSP07M = b'\x01\x50'      # Sensors in One
+    HDL_MPTLC43 = b'\x00\xC0'     # Enviro 4.3" touch panel
+    HDL_MPTL4C = b'\x08\x90'      # Granite Display 4" touch panel
+    HDL_MPTL4C_B = b'\x08\x72'    # Granite Display 4" touch panel (variant)
+    HDL_MPL35C_TILE = b'\x08\x7F'  # Tile series multifunction panel
+    HDL_MPL40E_TILE = b'\x08\x8E'  # Tile series multifunction panel
 
     # SB_DN_DT0601 = b'\x00\x9E'    # Universaldimmer 6ch 1A
     # SB_DN_RS232N				    # RS232
@@ -80,6 +85,19 @@ class OperateCode(Enum):
     BroadcastSensorStatusAutoResponse = b'\x16\x47'
 
     BroadcastTemperatureResponse = b'\xE3\xE5'
+
+    # Panel temperature (DLP / Enviro / Granite / Tile panels): the request
+    # carries a channel number; the reply is
+    # [channel, signed whole degrees, float32 little-endian degrees].
+    ReadTemperature = b'\xE3\xE7'
+    ReadTemperatureResponse = b'\xE3\xE8'
+
+    # Generic analog value read (e.g. panel humidity): the request payload is
+    # [analog_type, 0]; the reply repeats the type at payload[0] and carries
+    # the value at payload[2]. Analog type 0x45 is relative humidity, as read
+    # by the HDL Setup Tool for Granite / 4-inch touch panels.
+    ReadAnalogValue = b'\xE4\x40'
+    ReadAnalogValueResponse = b'\xE4\x41'
 
     ReadFloorHeatingStatus = b'\x19\x44'
     ReadFloorHeatingStatusResponse = b'\x19\x45'

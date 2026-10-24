@@ -59,7 +59,7 @@ class Climate(Device):
             self._away_temperature = telegram.payload[7]
             self._call_device_updated()
 
-            if success_or_fail == SuccessOrFailure.Success:
+            if success_or_fail == SuccessOrFailure.Success.value[0]:
                 self._call_device_updated()
 
         elif telegram.operate_code == OperateCode.BroadcastTemperatureResponse:
