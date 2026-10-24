@@ -24,6 +24,7 @@ SPK_TO_PLATFORM = {
     "hvac.ac_panel": "climate",
     "other.common": "switch",
     "sensor.temperature": "sensor",
+    "sensor.humidity": "sensor",
     "sensor.illuminance": "sensor",
     "sensor.lux": "sensor",
     "sensor.motion": "binary_sensor",

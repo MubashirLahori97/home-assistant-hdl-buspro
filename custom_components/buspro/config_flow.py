@@ -41,10 +41,23 @@ DEVICE_TYPE_MAP = {
     "climate": ("climate", "hvac.ac", ["temperature", "mode", "fan"]),
     "switch": ("switch", "other.common", ["on_off"]),
     "sensor_temp": ("sensor", "sensor.temperature", ["temperature"]),
+    "sensor_humidity": ("sensor", "sensor.humidity", ["humidity"]),
+    "panel_temp": ("sensor", "sensor.temperature", ["temperature"]),
+    "panel_humidity": ("sensor", "sensor.humidity", ["humidity"]),
     "sensor_lux": ("sensor", "sensor.illuminance", ["illuminance"]),
     "binary_motion": ("binary_sensor", "sensor.motion", ["motion"]),
     "binary_dry_contact": ("binary_sensor", "sensor.dry_contact", ["opening"]),
     "binary_universal_switch": ("binary_sensor", "sensor.universal_switch", ["switch"]),
+}
+
+# pybuspro device kind per manual device type. "panel" covers the wall
+# panels with built-in sensors: the DLP family, Enviro, Granite Display and
+# the Tile climate panels. "sensors_in_one" covers the HDL sensors-in-one
+# modules, whose status reply also carries humidity.
+DEVICE_KIND_MAP = {
+    "panel_temp": "panel",
+    "panel_humidity": "panel",
+    "sensor_humidity": "sensors_in_one",
 }
 
 DEVICE_TYPE_CHOICES = {
@@ -54,6 +67,9 @@ DEVICE_TYPE_CHOICES = {
     "climate": "Climate (AC)",
     "switch": "Switch (Relay)",
     "sensor_temp": "Sensor (Temperature °C)",
+    "sensor_humidity": "Sensor (Humidity %)",
+    "panel_temp": "Panel Sensor (Temperature °C) — DLP / Enviro / Granite / Tile",
+    "panel_humidity": "Panel Sensor (Humidity %) — Granite Display / Tile",
     "sensor_lux": "Sensor (Illuminance / Lux)",
     "binary_motion": "Binary Sensor (Motion / PIR)",
     "binary_dry_contact": "Binary Sensor (Dry Contact)",
@@ -238,6 +254,10 @@ class BusproOptionsFlowHandler(config_entries.OptionsFlow):
                 "capabilities": caps,
                 "unique_id": f"buspro_{subnet_id}_{device_id}_{channel}_{spk.replace('.', '_')}",
             }
+
+            device_kind = DEVICE_KIND_MAP.get(dev_type_key)
+            if device_kind:
+                new_device["device"] = device_kind
 
             # Update existing devices
             data = dict(self._config_entry.data)

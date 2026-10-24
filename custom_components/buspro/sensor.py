@@ -22,6 +22,7 @@ from homeassistant.const import (
     CONF_UNIT_OF_MEASUREMENT,
     CONF_DEVICE_CLASS, 
     CONF_SCAN_INTERVAL,
+    PERCENTAGE,
     UnitOfTemperature,
     LIGHT_LUX,
 )
@@ -78,9 +79,20 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, asyn
         spk = device_info.get("spk", "")
 
         device_address = (subnet_id, device_id)
-        sensor_type = "illuminance" if ("lux" in spk or "illuminance" in spk) else "temperature"
+        if "humid" in spk:
+            sensor_type = "humidity"
+        elif "lux" in spk or "illuminance" in spk:
+            sensor_type = "illuminance"
+        else:
+            sensor_type = "temperature"
 
-        sensor = Sensor(hdl, device_address, name=name)
+        device_kind = device_info.get("device")
+        sensor = Sensor(
+            hdl, device_address, name=name,
+            device=device_kind,
+            temperature_channel=device_info.get("channel", 1) or 1,
+            read_humidity=(sensor_type == "humidity" and device_kind == "panel"),
+        )
         entities.append(BusproSensor(
             hass, sensor, sensor_type=sensor_type, 
             area_name=area_name, 
@@ -117,7 +129,10 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
         address2 = address.split('.')
         device_address = (int(address2[0]), int(address2[1]))
 
-        sensor = Sensor(hdl, device_address, device=device, name=name)
+        sensor = Sensor(
+            hdl, device_address, device=device, name=name,
+            read_humidity=(sensor_type == "humidity" and device == "panel"),
+        )
         devices.append(BusproSensor(
             hass, sensor, sensor_type=sensor_type, 
             scan_interval=interval, offset=offset, 
@@ -140,6 +155,7 @@ class BusproSensor(SensorEntity):
         self._buspro_module = buspro_module
         self._temperature = None
         self._brightness = None
+        self._humidity = None
 
         self._attr_state_class = SensorStateClass.MEASUREMENT
         if self._sensor_type == "temperature":
@@ -148,6 +164,9 @@ class BusproSensor(SensorEntity):
         elif self._sensor_type == "illuminance":
             self._attr_device_class = SensorDeviceClass.ILLUMINANCE
             self._attr_native_unit_of_measurement = LIGHT_LUX
+        elif self._sensor_type == "humidity":
+            self._attr_device_class = SensorDeviceClass.HUMIDITY
+            self._attr_native_unit_of_measurement = PERCENTAGE
 
         if self._area_name:
             self._attr_suggested_area = self._area_name
@@ -170,6 +189,7 @@ class BusproSensor(SensorEntity):
             if self._hass is not None:
                 self._temperature = self._device.temperature
                 self._brightness = self._device.brightness
+                self._humidity = self._device.humidity
                 self.async_write_ha_state()
 
         self._device.register_device_updated_cb(after_update_callback)
@@ -207,6 +227,9 @@ class BusproSensor(SensorEntity):
 
         if self._sensor_type == "illuminance":
             return self._brightness
+
+        if self._sensor_type == "humidity":
+            return self._humidity
 
         return None
 
