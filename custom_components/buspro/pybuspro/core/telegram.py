@@ -13,6 +13,10 @@ class Telegram:
         self.source_address = None
         self.target_address = None
         self.crc = None
+        # Raw two-byte codes as received, kept even when the code is not in
+        # the OperateCode / DeviceType enums (operate_code is None then).
+        self.operate_code_raw = None
+        self.source_device_type_raw = None
 
     def __str__(self):
         """Return object as readable string."""
@@ -22,6 +26,7 @@ class Telegram:
             {"name": "source_device_type", "value": str(self.source_device_type)},
             {"name": "target_address", "value": self.target_address},
             {"name": "operate_code", "value": str(self.operate_code)},
+            {"name": "operate_code_raw", "value": self.operate_code_raw.hex() if self.operate_code_raw else None},
             {"name": "payload", "value": self.payload},
             {"name": "udp_address", "value": self.udp_address},
             {"name": "udp_data", "value": str(self.udp_data)},

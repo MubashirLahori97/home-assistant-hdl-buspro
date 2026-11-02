@@ -1,4 +1,4 @@
-import traceback
+import logging
 from struct import *
 
 from .enums import DeviceType
@@ -6,12 +6,21 @@ from .generics import Generics
 from ..core.telegram import Telegram
 from ..devices.control import *
 
+_LOGGER = logging.getLogger(__name__)
+
+# Source IP written into the HDL header when the local IP is unknown.
+DEFAULT_HEADER_IP = (192, 168, 1, 15)
+
 
 class TelegramHelper:
 
+    def __init__(self, header_ip=None):
+        # Local IP written into the HDL header of every frame we send.
+        self.header_ip = tuple(header_ip) if header_ip else DEFAULT_HEADER_IP
+
     def build_telegram_from_udp_data(self, data, address):
         if not data:
-            print("build_telegram_from_udp_data: not data")
+            _LOGGER.debug("build_telegram_from_udp_data: no data")
             return None
 
         try:
@@ -46,15 +55,17 @@ class TelegramHelper:
             telegram.udp_address = address
             telegram.payload = generics.hex_to_integer_list(content)
             telegram.crc = crc
+            telegram.operate_code_raw = bytes(operate_code_hex)
+            telegram.source_device_type_raw = bytes(source_device_type_hex)
 
             crc_check_pass = self._check_crc(telegram)
             if not crc_check_pass:
-                print("crc check failed")
+                _LOGGER.debug("CRC check failed for frame from %s", address)
                 return None
 
             return telegram
-        except Exception as e:
-            print("error building telegram: {}".format(traceback.format_exc()))
+        except Exception:
+            _LOGGER.debug("Could not decode frame from %s", address, exc_info=True)
             return None
 
     @staticmethod
@@ -71,7 +82,7 @@ class TelegramHelper:
 
     # noinspection SpellCheckingInspection
     def build_send_buffer(self, telegram: Telegram):
-        send_buf = bytearray([192, 168, 1, 15])
+        send_buf = bytearray(self.header_ip)
         # noinspection SpellCheckingInspection
         send_buf.extend('HDLMIRACLE'.encode())
         send_buf.append(0xAA)

@@ -11,6 +11,9 @@ class Device(object):
         self._buspro = buspro
         self._name = name
         self.device_updated_cbs = []
+        devices = getattr(buspro, "devices", None)
+        if devices is not None:
+            devices.add(self)
 
     @property
     def name(self):

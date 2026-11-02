@@ -116,6 +116,30 @@ class OperateCode(Enum):
     ReadSensorsInOneStatus = b'\x16\x04'
     ReadSensorsInOneStatusResponse = b'\x16\x05'
 
+    # Sequences: payload [area, sequence]. The broadcast carries one byte
+    # per area with the running sequence number.
+    SequenceControl = b'\x00\x1A'
+    SequenceControlResponse = b'\x00\x1B'
+    BroadcastStatusOfSequence = b'\xF0\x36'
+
+    # Device identification. Read device remark has an empty request and a
+    # reply of a 20-byte name; the sender's device type identifies the model.
+    ReadDeviceRemark = b'\x00\x0E'
+    ReadDeviceRemarkResponse = b'\x00\x0F'
+    ReadFirmwareVersion = b'\xEE\xFD'
+    ReadFirmwareVersionResponse = b'\xEE\xFE'
+    IsDeviceOnline = b'\xF0\x65'
+    IsDeviceOnlineResponse = b'\xF0\x66'
+
+    # HVAC module (M/HVAC, MPED, MAC, IR AC). 13-byte payload:
+    # [ac, temp type, current temp, cool, heat, auto, dry setpoints,
+    #  mode << 4 | speed, on/off, setup mode, setup speed, setup temp,
+    #  swing enabled << 4 | swing active]
+    ReadHvacStatus = b'\x19\x38'
+    ReadHvacStatusResponse = b'\x19\x39'
+    ControlHvacStatus = b'\x19\x3A'
+    ControlHvacStatusResponse = b'\x19\x3B'
+
     """
     # 
     # 
