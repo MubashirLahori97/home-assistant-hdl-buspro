@@ -23,6 +23,10 @@ class _Control:
             operate_code = OperateCode.SceneControl
             payload = [control.area_number, control.scene_number]
 
+        elif type(control) == _SequenceControl:
+            operate_code = OperateCode.SequenceControl
+            payload = [control.area_number, control.sequence_number]
+
         elif type(control) == _ReadStatusOfChannels:
             operate_code = OperateCode.ReadStatusOfChannels
             payload = []
@@ -123,6 +127,14 @@ class _SceneControl(_Control):
 
         self.area_number = None
         self.scene_number = None
+
+
+class _SequenceControl(_Control):
+    def __init__(self, buspro):
+        super().__init__(buspro)
+
+        self.area_number = None
+        self.sequence_number = None
 
 
 class _ReadStatusOfChannels(_Control):

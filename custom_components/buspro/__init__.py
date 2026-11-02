@@ -1,5 +1,8 @@
 """Support for Buspro devices."""
+import asyncio
 import logging
+import socket
+import time
 
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
@@ -21,6 +24,10 @@ from .const import (
     CONF_GATEWAY_INFO,
     CONF_CREATED_FLOORS,
     CONF_CREATED_AREAS,
+    CONF_GATEWAY_IP_FILTER,
+    CONF_ONLINE_CHECK_INTERVAL,
+    CONF_BUS_MONITOR,
+    EVENT_TELEGRAM,
     PLATFORMS,
 )
 
@@ -192,16 +199,32 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     host = config_entry.data.get(CONF_HOST, "")
     port = config_entry.data.get(CONF_PORT, 6000)
+    options = config_entry.options
 
-    buspro_module = BusproModule(hass, host, port)
+    header_ip = await hass.async_add_executor_job(_local_ip_towards, host)
+    buspro_module = BusproModule(
+        hass, host, port,
+        header_ip=header_ip,
+        gateway_ip_filter=options.get(CONF_GATEWAY_IP_FILTER, False),
+    )
     await buspro_module.start()
 
     hass.data[DOMAIN][config_entry.entry_id] = buspro_module
 
     buspro_module.register_services()
 
+    if options.get(CONF_BUS_MONITOR, False):
+        buspro_module.enable_bus_monitor()
+
     # Forward setup to all supported platforms
     await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+
+    interval = options.get(CONF_ONLINE_CHECK_INTERVAL, 0) or 0
+    if interval > 0:
+        buspro_module.start_online_check(interval)
+
+    from .bridge import async_setup_bridges
+    await async_setup_bridges(hass, config_entry, buspro_module)
 
     config_entry.async_on_unload(
         config_entry.add_update_listener(async_reload_entry)
@@ -223,6 +246,23 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
         if buspro_module:
             await buspro_module.stop(None)
     return unload_ok
+
+
+def _local_ip_towards(host: str):
+    """Return this machine's IP on the route to the gateway, as 4 ints.
+
+    Connecting a UDP socket sends nothing; it only picks the route.
+    """
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.connect((host, 6000))
+            ip = sock.getsockname()[0]
+        parts = tuple(int(p) for p in ip.split("."))
+        if len(parts) == 4 and parts != (0, 0, 0, 0):
+            return parts
+    except (OSError, ValueError):
+        pass
+    return None
 
 
 class _RawOperateCode:
@@ -253,32 +293,151 @@ def _operate_code_from_int(code: int):
 class BusproModule:
     """Representation of Buspro Object."""
 
-    def __init__(self, hass, host, port):
+    def __init__(self, hass, host, port, header_ip=None, gateway_ip_filter=False):
         """Initialize of Buspro module."""
         self.hass = hass
         self.connected = False
         self.hdl = None
+        self.host = host
+        self.port = port
+        self.header_ip = header_ip
+        self.gateway_ip_filter = gateway_ip_filter
         self.gateway_address_send_receive = ((host, port), ('', port))
+        # (subnet, device) -> {"last_seen": epoch, "device_type": hex}
+        self.seen_devices = {}
+        # Devices whose last online check went unanswered
+        self.offline_devices = set()
+        self.firmware = {}
+        self._online_task = None
+        self._unsub_stop = None
         self.init_hdl()
 
     def init_hdl(self):
         """Initialize of Buspro object."""
         # noinspection PyUnresolvedReferences
         from .pybuspro.buspro import Buspro
-        self.hdl = Buspro(self.gateway_address_send_receive, self.hass.loop)
+        self.hdl = Buspro(
+            self.gateway_address_send_receive, self.hass.loop,
+            header_ip=self.header_ip,
+            gateway_ip_filter=self.gateway_ip_filter,
+        )
 
     async def start(self):
         """Start Buspro object. Connect to tunneling device."""
         await self.hdl.start(state_updater=False)
-        self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self.stop)
+        self.hdl.register_telegram_received_all_messages_cb(self._track_seen)
+        self._unsub_stop = self.hass.bus.async_listen_once(
+            EVENT_HOMEASSISTANT_STOP, self.stop)
         self.connected = True
 
     # noinspection PyUnusedLocal
     async def stop(self, event=None):
         """Stop Buspro object. Disconnect from tunneling device."""
+        if self._online_task is not None:
+            self._online_task.cancel()
+            self._online_task = None
+        if self._unsub_stop is not None and event is None:
+            self._unsub_stop()
+        self._unsub_stop = None
         if self.hdl:
             await self.hdl.stop()
         self.connected = False
+
+    def _track_seen(self, telegram):
+        address = tuple(telegram.source_address)
+        raw_type = telegram.source_device_type_raw
+        self.seen_devices[address] = {
+            "last_seen": time.time(),
+            "device_type": raw_type.hex() if raw_type else None,
+        }
+        if address in self.offline_devices:
+            self.offline_devices.discard(address)
+            self._notify_devices(address)
+
+    def is_available(self, address=None):
+        """Return False when the gateway is down or the device failed its
+        last online check."""
+        if not self.connected:
+            return False
+        if address is None:
+            return True
+        return tuple(address)[:2] not in self.offline_devices
+
+    def _notify_devices(self, address):
+        for device in list(self.hdl.devices):
+            device_address = tuple(getattr(device, "_device_address", ()) or ())
+            if device_address[:2] == tuple(address):
+                device._call_device_updated()
+
+    def enable_bus_monitor(self):
+        """Fire a buspro_telegram event for every message on the bus."""
+        def _fire(telegram):
+            raw = telegram.operate_code_raw
+            raw_type = telegram.source_device_type_raw
+            self.hass.bus.async_fire(EVENT_TELEGRAM, {
+                "source_address": list(telegram.source_address),
+                "target_address": list(telegram.target_address),
+                "source_device_type": raw_type.hex() if raw_type else None,
+                "operate_code": raw.hex() if raw else None,
+                "operate_code_name": telegram.operate_code.name
+                if telegram.operate_code is not None else None,
+                "payload": list(telegram.payload or []),
+            })
+        self.hdl.register_telegram_received_all_messages_cb(_fire)
+
+    def start_online_check(self, interval):
+        """Periodically ask every configured device whether it is online."""
+        async def _run():
+            while True:
+                await asyncio.sleep(interval)
+                await self.async_check_online()
+        self._online_task = self.hass.async_create_background_task(
+            _run(), "buspro online check")
+
+    async def async_check_online(self):
+        """Ask each configured device whether it is online (0xF065)."""
+        from .pybuspro.core.telegram import Telegram
+        from .pybuspro.helpers.enums import OperateCode
+
+        addresses = {
+            tuple(getattr(d, "_device_address", ()) or ())[:2]
+            for d in list(self.hdl.devices)
+        }
+        for address in sorted(a for a in addresses if len(a) == 2):
+            telegram = Telegram()
+            telegram.target_address = address
+            telegram.operate_code = OperateCode.IsDeviceOnline
+            reply = await self.hdl.request(
+                telegram, OperateCode.IsDeviceOnlineResponse.value,
+                timeout=1.0, retries=1)
+            was_offline = address in self.offline_devices
+            if reply is None and not was_offline:
+                self.offline_devices.add(address)
+                self._notify_devices(address)
+            elif reply is not None and was_offline:
+                self.offline_devices.discard(address)
+                self._notify_devices(address)
+
+    async def async_read_firmware(self, address):
+        """Read and cache a device's firmware version string (0xEEFD)."""
+        from .pybuspro.core.telegram import Telegram
+        from .pybuspro.helpers.enums import OperateCode
+
+        address = tuple(address)
+        if address in self.firmware:
+            return self.firmware[address]
+        telegram = Telegram()
+        telegram.target_address = address
+        telegram.operate_code = OperateCode.ReadFirmwareVersion
+        reply = await self.hdl.request(
+            telegram, OperateCode.ReadFirmwareVersionResponse.value,
+            timeout=1.0, retries=1)
+        if reply is None:
+            return None
+        version = bytes(reply.payload).split(b"\x00")[0].decode(
+            "ascii", errors="replace").strip()
+        self.firmware[address] = version
+        return version
 
     async def service_activate_scene(self, call):
         """Service for activating a scene."""

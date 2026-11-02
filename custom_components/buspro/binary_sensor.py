@@ -207,7 +207,8 @@ class BusproBinarySensor(BinarySensorEntity):
     def available(self):
         """Return True if entity is available."""
         if self._buspro_module:
-            return self._buspro_module.connected
+            return self._buspro_module.is_available(
+                getattr(self._device, "_device_address", None))
         return True
 
     @property
