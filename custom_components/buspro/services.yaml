@@ -11,7 +11,7 @@ activate_scene:
         object: {}
     scene_address:
       name: Scene address
-      description: The scene address as [subnet_id, scene_number].
+      description: The scene as [area_number, scene_number], as numbered in HDL Buspro Setup Tool.
       required: true
       example: "[3, 5]"
       selector:
