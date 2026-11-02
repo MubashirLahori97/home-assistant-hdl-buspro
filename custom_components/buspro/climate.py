@@ -73,7 +73,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, async_add_entities):
     """Set up Buspro climate devices from a config entry."""
     # noinspection PyUnresolvedReferences
-    from .pybuspro.devices import AC, Climate
+    from .pybuspro.devices import AC, Climate, HvacModule
 
     buspro_module = hass.data[DOMAIN][config_entry.entry_id]
     hdl = buspro_module.hdl
@@ -96,9 +96,17 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, asyn
         if "floor_heating" in spk:
             climate = Climate(hdl, device_address, name)
             entities.append(BusproClimate(
-                hass, climate, [], None, 
+                hass, climate, list(HA_PRESET_TO_HDL), None, 
                 area_name=area_name, 
                 unique_id=device_info.get("unique_id"), 
+                buspro_module=buspro_module
+            ))
+        elif spk == "hvac.module":
+            hvac_device = HvacModule(hdl, device_address, channel, name)
+            entities.append(BusproAC(
+                hass, hvac_device,
+                area_name=area_name,
+                unique_id=device_info.get("unique_id"),
                 buspro_module=buspro_module
             ))
         else:
@@ -238,7 +246,8 @@ class BusproAC(ClimateEntity):
     def available(self):
         """Return True if entity is available."""
         if self._buspro_module:
-            return self._buspro_module.connected
+            return self._buspro_module.is_available(
+                getattr(self._device, "_device_address", None))
         return True
 
     @property
@@ -396,7 +405,8 @@ class BusproClimate(ClimateEntity):
     def available(self):
         """Return True if entity is available."""
         if self._buspro_module:
-            return self._buspro_module.connected
+            return self._buspro_module.is_available(
+                getattr(self._device, "_device_address", None))
         return True
 
     @property

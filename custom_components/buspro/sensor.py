@@ -30,7 +30,7 @@ from homeassistant.core import callback
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .const import CONF_DEVICES as CONF_DEVICES_ENTRY, DOMAIN
+from .const import CONF_DEVICES as CONF_DEVICES_ENTRY, CONF_EXPERIMENTAL, DOMAIN
 
 DEFAULT_CONF_UNIT_OF_MEASUREMENT = ""
 DEFAULT_CONF_DEVICE_CLASS = "None"
@@ -70,6 +70,12 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, asyn
 
     for device_info in raw_devices:
         if device_info.get("platform") != "sensor":
+            continue
+
+        if device_info.get("spk") == "sensor.raw":
+            if config_entry.options.get(CONF_EXPERIMENTAL, False):
+                from .raw_sensor import BusproRawSensor
+                entities.append(BusproRawSensor(buspro_module, device_info))
             continue
 
         name = device_info.get("name", "Sensor")
@@ -211,7 +217,8 @@ class BusproSensor(SensorEntity):
     def available(self):
         """Return True if entity is available."""
         if self._buspro_module:
-            return self._buspro_module.connected
+            return self._buspro_module.is_available(
+                getattr(self._device, "_device_address", None))
         return True
 
     @property
