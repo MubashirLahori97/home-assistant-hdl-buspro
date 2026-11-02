@@ -36,6 +36,7 @@ send_message:
       selector:
         number:
           min: 0
+          max: 65535
     payload:
       name: Payload
       description: Payload bytes as a list of integers.

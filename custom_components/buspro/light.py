@@ -8,9 +8,10 @@ except ImportError:
     from homeassistant.helpers.entity import DeviceInfo
 import voluptuous as vol
 from homeassistant.components.light import (
-    LightEntity, 
-    ColorMode, 
-    PLATFORM_SCHEMA, 
+    LightEntity,
+    ColorMode,
+    LightEntityFeature,
+    PLATFORM_SCHEMA,
     ATTR_BRIGHTNESS,
     ATTR_TRANSITION
 )
@@ -124,6 +125,10 @@ class BusproLight(LightEntity):
         self._custom_unique_id = unique_id
         self._buspro_module = buspro_module
 
+        # Transition support: without this flag Home Assistant strips the
+        # transition value from the call before the entity ever sees it.
+        self._attr_supported_features = LightEntityFeature.TRANSITION
+
         if self._dimmable:
             self._attr_color_mode = ColorMode.BRIGHTNESS
             self._attr_supported_color_modes = {ColorMode.BRIGHTNESS}
@@ -184,7 +189,12 @@ class BusproLight(LightEntity):
 
     async def async_turn_on(self, **kwargs):
         """Instruct the light to turn on."""
-        running_time = kwargs.get(ATTR_TRANSITION, self._running_time)
+        transition = kwargs.get(ATTR_TRANSITION)
+        # Transition arrives as a float; the telegram payload only takes
+        # whole bytes, so convert before it reaches the bus.
+        running_time = (
+            int(round(transition)) if transition is not None else self._running_time
+        )
         if self._dimmable:
             brightness = int(kwargs.get(ATTR_BRIGHTNESS, 255) / 255 * 100)
             if not self.is_on and self._device.previous_brightness is not None and brightness == 100:
@@ -195,7 +205,11 @@ class BusproLight(LightEntity):
 
     async def async_turn_off(self, **kwargs):
         """Instruct the light to turn off."""
-        await self._device.set_off(kwargs.get(ATTR_TRANSITION, self._running_time))
+        transition = kwargs.get(ATTR_TRANSITION)
+        running_time = (
+            int(round(transition)) if transition is not None else self._running_time
+        )
+        await self._device.set_off(running_time)
 
     @property
     def unique_id(self):

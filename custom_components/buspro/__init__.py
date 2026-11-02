@@ -49,7 +49,9 @@ SERVICE_BUSPRO_ACTIVATE_SCENE_SCHEMA = vol.Schema({
 
 SERVICE_BUSPRO_SEND_MESSAGE_SCHEMA = vol.Schema({
     vol.Required(SERVICE_BUSPRO_ATTR_ADDRESS): vol.Any([cv.positive_int]),
-    vol.Required(SERVICE_BUSPRO_ATTR_OPERATE_CODE): vol.Any([cv.positive_int]),
+    vol.Required(SERVICE_BUSPRO_ATTR_OPERATE_CODE): vol.All(
+        cv.positive_int, vol.Range(max=65535)
+    ),
     vol.Required(SERVICE_BUSPRO_ATTR_PAYLOAD): vol.Any([cv.positive_int]),
 })
 
@@ -142,6 +144,10 @@ async def async_setup_floors_and_areas(hass: HomeAssistant, entry_data: dict) ->
                     (a for a in created_areas if a.get("name") == area_name), None
                 )
                 if known is None:
+                    # A pre-existing area with this name belongs to the user:
+                    # leave it alone (no floor change, not recorded as ours).
+                    if area_reg.async_get_area_by_name(area_name) is not None:
+                        continue
                     area_entry = area_reg.async_get_or_create(area_name)
                     if floor_name and floor_name in floor_id_map:
                         try:
@@ -219,6 +225,31 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
     return unload_ok
 
 
+class _RawOperateCode:
+    """Operate code holder for codes outside the known OperateCode enum.
+
+    Carries the same .value shape (two bytes) the telegram builder reads.
+    """
+
+    def __init__(self, value: bytes):
+        self.value = value
+
+
+def _operate_code_from_int(code: int):
+    """Convert a single integer operate code to the two-byte form the
+    telegram builder expects (an object whose .value is two bytes, big
+    endian). Known codes return the real OperateCode member; anything else
+    gets a minimal holder so arbitrary codes still build a valid telegram.
+    """
+    from .pybuspro.helpers.enums import OperateCode
+
+    two_bytes = bytes(((code >> 8) & 0xFF, code & 0xFF))
+    try:
+        return OperateCode(two_bytes)
+    except ValueError:
+        return _RawOperateCode(two_bytes)
+
+
 class BusproModule:
     """Representation of Buspro Object."""
 
@@ -267,7 +298,13 @@ class BusproModule:
         attr_address = call.data.get(SERVICE_BUSPRO_ATTR_ADDRESS)
         attr_payload = call.data.get(SERVICE_BUSPRO_ATTR_PAYLOAD)
         attr_operate_code = call.data.get(SERVICE_BUSPRO_ATTR_OPERATE_CODE)
-        generic = Generic(self.hdl, attr_address, attr_payload, attr_operate_code, DEFAULT_SEND_MESSAGE_NAME)
+        generic = Generic(
+            self.hdl,
+            attr_address,
+            attr_payload,
+            _operate_code_from_int(attr_operate_code),
+            DEFAULT_SEND_MESSAGE_NAME,
+        )
         await generic.run()
 
     async def service_set_universal_switch(self, call):
