@@ -30,7 +30,38 @@ SPK_TO_PLATFORM = {
     "sensor.motion": "binary_sensor",
     "sensor.dry_contact": "binary_sensor",
     "sensor.universal_switch": "binary_sensor",
+    "light.color": "light",
+    "hvac.module": "climate",
+    "hvac.floor_heating": "climate",
+    "fan.relay": "fan",
+    "fan.dimmer": "fan",
+    "panel.buttons": "event",
+    "scene.bus": "button",
+    "sequence.bus": "button",
 }
 
+# Bridged non-HDL entities (virtual HDL devices answering on the bus).
+CONF_BRIDGES = "bridges"
+
+# Options (entry.options)
+CONF_GATEWAY_IP_FILTER = "gateway_ip_filter"
+CONF_ONLINE_CHECK_INTERVAL = "online_check_interval"
+CONF_BUS_MONITOR = "bus_monitor"
+CONF_EXPERIMENTAL = "experimental"
+
+# Bus events fired on the Home Assistant event bus
+EVENT_PANEL_BUTTON = "buspro_panel_button"
+EVENT_TELEGRAM = "buspro_telegram"
+
 # Platform list for entity forwarding
-PLATFORMS = ["light", "cover", "climate", "switch", "sensor", "binary_sensor"]
+PLATFORMS = [
+    "light",
+    "cover",
+    "climate",
+    "switch",
+    "sensor",
+    "binary_sensor",
+    "event",
+    "button",
+    "fan",
+]

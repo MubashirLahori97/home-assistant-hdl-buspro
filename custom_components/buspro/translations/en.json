@@ -11,7 +11,7 @@
       },
       "manual_gateway": {
         "title": "HDL Gateway Connection",
-        "description": "Enter the IP address and UDP port of your HDL Buspro IP Gateway:",
+        "description": "Gateways found on your network: {found}. The first one found is filled in. Check the IP address and UDP port of your HDL Buspro IP Gateway:",
         "data": {
           "host": "Gateway IP Address",
           "port": "Gateway Port (UDP, default 6000)"
@@ -42,7 +42,14 @@
         "description": "Choose an action to manage your HDL Buspro setup:",
         "menu_options": {
           "add_device": "Add Device or Sensor Manually",
-          "import_file": "Import / Update from File (Excel, CSV, JSON)"
+          "add_scene": "Add Scene or Sequence Button",
+          "add_color_light": "Add Tunable-White / RGB Light",
+          "add_bridge": "Control a Non-HDL Device from an HDL Panel",
+          "remove_bridge": "Remove Bridged Devices",
+          "scan_bus": "Scan the Bus for Modules",
+          "import_file": "Import / Update from File (Excel, CSV, JSON)",
+          "settings": "Settings",
+          "add_raw_sensor": "Add Raw Read Sensor (experimental)"
         }
       },
       "add_device": {
@@ -57,6 +64,66 @@
           "area_name": "Room / Area Name (e.g. Study, Lounge)"
         }
       },
+      "add_scene": {
+        "title": "Add Scene or Sequence Button",
+        "description": "Scenes and sequences are stored in an HDL module. Enter the module address and the area and scene/sequence number from HDL Buspro Setup Tool.",
+        "data": {
+          "name": "Button Name",
+          "kind": "Type",
+          "subnet_id": "Module Subnet ID",
+          "device_id": "Module Device ID",
+          "area_number": "Area Number",
+          "number": "Scene / Sequence Number",
+          "area_name": "Room / Area Name"
+        }
+      },
+      "add_color_light": {
+        "title": "Add Tunable-White / RGB Light",
+        "description": "Combine the dimmer or LED-driver channels of one light. List the channels in order: warm, cool for tunable white; red, green, blue (and white) for RGB / RGBW.",
+        "data": {
+          "name": "Light Name",
+          "color_mode": "Light Type",
+          "subnet_id": "Subnet ID",
+          "device_id": "Device ID",
+          "channels": "Channels (comma separated, e.g. 1, 2)",
+          "min_kelvin": "Warmest colour temperature (K)",
+          "max_kelvin": "Coolest colour temperature (K)",
+          "area_name": "Room / Area Name"
+        }
+      },
+      "add_bridge": {
+        "title": "Control a Non-HDL Device from an HDL Panel",
+        "description": "Home Assistant will answer on the HDL bus as a virtual device at the address below. In HDL Buspro Setup Tool, point a panel button at this address (universal switch or channel number) and it will control the chosen entity — for example a Tuya light. The panel's button LED follows the entity. Use an address no real module uses (device IDs 200-254 are usually free). Works only while Home Assistant is running.",
+        "data": {
+          "name": "Name",
+          "entity_id": "Entity to control",
+          "kind": "What the panel button sends",
+          "subnet_id": "Virtual Subnet ID",
+          "device_id": "Virtual Device ID",
+          "number": "Universal Switch / Channel Number"
+        }
+      },
+      "remove_bridge": {
+        "title": "Remove Bridged Devices",
+        "description": "Tick the bridged devices to remove.",
+        "data": {
+          "bridges": "Bridged devices"
+        }
+      },
+      "scan_bus": {
+        "title": "Scan the Bus for Modules",
+        "description": "Home Assistant asks every module on the bus for its name and type. This takes a few seconds per output module. Modules you already configured are skipped.",
+        "data": {
+          "relay_platform": "Add relay channels as"
+        }
+      },
+      "scan_select": {
+        "title": "Modules Found",
+        "description": "Found {count} new modules. Tick the ones to add. Dimmer channels become dimmable lights; panels get button events and a temperature sensor; sensors get their temperature, light and motion entities.",
+        "data": {
+          "modules": "Modules"
+        }
+      },
       "import_file": {
         "title": "Import / Update from File",
         "description": "Provide the path or paste content of an Excel (.xlsx), CSV (.csv), or JSON backup file:",
@@ -64,12 +131,52 @@
           "file_path": "File path (e.g. /config/devices.xlsx)",
           "file_content": "Or paste content directly"
         }
+      },
+      "settings": {
+        "title": "Settings",
+        "data": {
+          "gateway_ip_filter": "Only accept messages from the gateway's IP address",
+          "online_check_interval": "Check modules are online every N seconds (0 = off, minimum 30)",
+          "bus_monitor": "Bus monitor: fire a buspro_telegram event for every message",
+          "experimental": "Enable experimental features (raw read sensors)"
+        }
+      },
+      "add_raw_sensor": {
+        "title": "Add Raw Read Sensor (experimental)",
+        "description": "Polls an HDL read command and decodes bytes of the reply. The power-meter presets fill in the command, unit and type, but their reply layout is not documented anywhere public: turn on the bus monitor, capture a reply from your meter, and set the byte offset, length and scale to match. Codes are hexadecimal (e.g. D90A).",
+        "data": {
+          "name": "Sensor Name",
+          "preset": "Preset",
+          "subnet_id": "Subnet ID",
+          "device_id": "Device ID",
+          "request_code": "Read command (hex, blank = preset)",
+          "request_payload": "Request payload bytes (comma separated, optional)",
+          "response_code": "Reply code (hex, blank = command + 1)",
+          "byte_offset": "Value starts at reply byte",
+          "byte_length": "Value length (bytes)",
+          "byteorder": "Byte order",
+          "signed": "Signed value",
+          "scale": "Multiply by",
+          "unit": "Unit (blank = preset)",
+          "scan_interval": "Read every N seconds",
+          "area_name": "Room / Area Name"
+        }
       }
     },
     "error": {
       "missing_input": "Please provide a file path or paste file content.",
       "parse_error": "Could not parse file data.",
-      "unknown": "An unexpected error occurred."
+      "unknown": "An unexpected error occurred.",
+      "wrong_channel_count": "Enter one channel per colour: 2 for tunable white, 3 for RGB, 4 for RGBW, with no repeats.",
+      "bad_kelvin_range": "The coolest temperature must be higher than the warmest.",
+      "address_in_use": "A real module uses this address. Pick an unused Device ID.",
+      "bridge_exists": "This virtual address already has a bridge on that switch / channel number.",
+      "not_connected": "The gateway is not connected.",
+      "nothing_found": "No new modules answered. Check the gateway connection, or every module is already configured.",
+      "bad_code": "Enter the read command as hexadecimal, or pick a preset."
+    },
+    "abort": {
+      "no_bridges": "There are no bridged devices to remove."
     }
   }
 }

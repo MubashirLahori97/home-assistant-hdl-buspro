@@ -8,3 +8,4 @@ from .switch import Switch
 from .universal_switch import UniversalSwitch
 from .cover import Cover
 from .ac import AC
+from .hvac import HvacModule
